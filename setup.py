@@ -21,7 +21,8 @@ setup(
     entry_points={
         'console_scripts': [
             'image_publisher = ros2_cv_tutorial.image_publisher:main',
-            'image_subscriber = ros2_cv_tutorial.image_subscriber:main'
+            'image_subscriber = ros2_cv_tutorial.image_subscriber:main',
+            'image_extractor_node = ros2_cv_tutorial.image_extractor_node:main',
         ],
     },
 )
