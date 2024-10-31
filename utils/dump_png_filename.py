@@ -1,6 +1,7 @@
 import os
 import cv2
 import numpy as np
+import imageio
 
 
 def list_images_and_save_to_txt(folder_path, output_txt_path):
@@ -117,3 +118,86 @@ def crop_images_center(images_folder, output_folder, crop_width=640, crop_height
         # クロップした画像を保存
         cv2.imwrite(output_path, cropped_image)
         print(f"'{image_file}' をクロップして '{output_path}' に保存しました。")
+
+
+# フォルダ内のpng画像を取得してソート
+def get_sorted_png_images(folder_path):
+    # フォルダ内のファイルを取得し、pngファイルのみを抽出
+    files = [f for f in os.listdir(folder_path) if f.endswith('.png')]
+    # ファイル名でソート
+    files.sort()
+    # フルパスを返す
+    return [os.path.join(folder_path, f) for f in files]
+
+# 画像からMP4を作成
+def create_mp4(images, output_path, fps=30):
+    # 最初の画像のサイズを取得
+    frame = cv2.imread(images[0])
+    height, width, _ = frame.shape
+
+    # MP4ビデオのライターを初期化
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    video_writer = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+
+    # 画像を順に書き込み
+    for image_path in images:
+        frame = cv2.imread(image_path)
+        video_writer.write(frame)
+
+    video_writer.release()
+    print(f"MP4ファイルが保存されました: {output_path}")
+
+# 画像からGIFを作成
+def create_gif(images, output_path, fps=30):
+    frames = []
+    for image_path in images:
+        frame = cv2.imread(image_path)
+        # BGRからRGBに変換 (OpenCVはBGRなので)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frames.append(frame)
+
+    # GIFを作成
+    imageio.mimsave(output_path, frames, format='GIF', fps=fps)
+    print(f"GIFファイルが保存されました: {output_path}")
+
+
+def dump_association(image_files, output_path):
+    # 画像ファイル名をtxtファイルに書き込み
+    with open(output_path, 'w') as txt_file:
+        for image_file in image_files:
+            image_file = os.path.splitext(os.path.basename(image_file))[0]
+            timestamp = image_file.replace("_", ".")
+            rgb_path = f"images/{image_file}"
+            depth_path = f"depths/{image_file}"
+            dump_text = f"{timestamp} {rgb_path}.png {timestamp} {depth_path}.png"
+            txt_file.write(dump_text + '\n')
+
+
+folder_path = "~/usr/yano_ws/AsymFormer/data/TidyUp_v3/raw/images"
+output_txt_path = '~/usr/yano_ws/AsymFormer/data/TidyUp_v3/raw/test.txt'  # 出力するtxtファイルのパス
+labels_path = '~/usr/yano_ws/AsymFormer/data/TidyUp_v3/raw/labels'  # 画像フォルダのパス
+
+
+rename_and_sort_png_files(folder_path=folder_path)
+list_images_and_save_to_txt(folder_path, output_txt_path)
+create_black_images_from_source(folder_path, labels_folder=labels_path)
+folder_path = "~/usr/yano_ws/AsymFormer/data/TidyUp_v3/raw/depths"
+output_path = '~/usr/yano_ws/AsymFormer/data/TidyUp_v3/crop/images'  # 画像フォルダのパス
+crop_images_center(folder_path, output_folder=output_path, is_depth=True, is_label=False)
+
+folder_path = "~/usr/yano_ws/gaussian-grouping/Tracking-Anything-with-DEVA/example/output_gaussian_dataset/temp/Annotations/"
+# folder_path = "~/usr/yano_ws/ros2_gs_ws/src/cartgs/data/tidy_up/crop/images/"
+
+output_mp4 = 'output_video_mask.mp4'  # 出力するMP4のファイル名
+output_gif = 'output_animation_images.gif'  # 出力するGIFのファイル名
+fps = 10  # フレームレート
+
+sorted_images = get_sorted_png_images(folder_path)
+create_mp4(sorted_images, output_mp4, fps)
+# GIFを作成
+create_gif(sorted_images, output_gif, fps)
+
+
+folder_path = "~/usr/yano_ws/cartgs/data/tidy_up/raw/images"
+sorted_images = get_sorted_png_images(folder_path)
+dump_association(sorted_images, "tidyup_asssociations.txt")
